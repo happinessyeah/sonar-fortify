@@ -21,6 +21,8 @@ package org.sonar.fortify.fvdl;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Matchers;
+import org.mockito.Mockito;
 import org.sonar.api.batch.SensorContext;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
@@ -33,6 +35,7 @@ import org.sonar.api.issue.Issue;
 import org.sonar.api.resources.Project;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.fortify.base.metrics.FortifyMetrics;
+import org.sonar.fortify.fvdl.element.Fvdl;
 
 import java.io.File;
 import java.net.URISyntaxException;
@@ -74,6 +77,10 @@ public class FortifySensorTest {
     assertThat(this.sensor.toString()).isEqualTo("Fortify sensor");
   }
 
+  /**
+   * 文件解析入口
+   * @throws URISyntaxException
+   */
   @Test
   public void shouldAnalyse() throws URISyntaxException {
     when(this.configuration.getReportPath()).thenReturn("audit-simple.fvdl");
@@ -93,7 +100,7 @@ public class FortifySensorTest {
     MockIssueBuilder mockIssueBuilder = new MockIssueBuilder();
     when(issuable.newIssueBuilder()).thenReturn(mockIssueBuilder);
     when(issuable.addIssue(any(Issue.class))).thenReturn(true);
-
+    // 主要分析步骤
     this.sensor.analyse(project, context);
 
     assertThat(mockIssueBuilder.ruleKey).isEqualTo(RuleKey.of("fortify-web", "code_quality_unreleased_resource_database"));
@@ -108,6 +115,31 @@ public class FortifySensorTest {
     verify(context).saveMeasure(FortifyMetrics.MFPO, 0.0);
     verify(context).saveMeasure(FortifyMetrics.LFPO, 0.0);
     verify(context).saveMeasure(FortifyMetrics.SECURITY_RATING, 1.0);
+  }
+
+  @Test
+  public void shouldAnalyse2() throws URISyntaxException {
+    File detectFile = new File("C:\\Users\\jimiao\\Desktop\\result.fpr");
+    String fileName = detectFile.getName();
+    String basePath = detectFile.getParent();
+    Mockito.when(this.configuration.getReportPath()).thenReturn(fileName);
+    Project project = new Project("dvwa");
+    File baseDir = new File(basePath);
+    this.fileSystem.setBaseDir(baseDir);
+    this.fileSystem.addLanguages("web", new String[0]);
+    ActiveRule activeRule = (ActiveRule)Mockito.mock(ActiveRule.class);
+    RuleKey ruleKey = RuleKey.of("fortify-web", "code_quality_unreleased_resource_database");
+    Mockito.when(activeRule.ruleKey()).thenReturn(ruleKey);
+    Mockito.when(this.activeRules.find(ruleKey)).thenReturn(activeRule);
+    SensorContext context = (SensorContext)Mockito.mock(SensorContext.class);
+    DefaultInputFile inputFile = (new DefaultInputFile("WebContent/main.jsp")).setFile(new File(baseDir, "WebContent/main.jsp"));
+    this.fileSystem.add(inputFile);
+    Issuable issuable = (Issuable)Mockito.mock(Issuable.class);
+    Mockito.when((Issuable)this.resourcePerspectives.as(Issuable.class, inputFile)).thenReturn(issuable);
+    FortifySensorTest.MockIssueBuilder mockIssueBuilder = new FortifySensorTest.MockIssueBuilder();
+    Mockito.when(issuable.newIssueBuilder()).thenReturn(mockIssueBuilder);
+    Mockito.when(issuable.addIssue((Issue) Matchers.any(Issue.class))).thenReturn(true);
+    this.sensor.analyse(project, context);
   }
 
   private class MockIssueBuilder implements IssueBuilder {

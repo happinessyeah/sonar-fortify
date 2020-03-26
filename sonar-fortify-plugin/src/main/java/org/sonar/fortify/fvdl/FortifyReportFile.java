@@ -64,8 +64,12 @@ class FortifyReportFile {
     return null;
   }
 
-  private InputStream getInputStreamFromFprFile(File file) throws IOException {
+  public InputStream getInputStreamFromFprFile(File file) throws IOException {
     final ZipFile fprFile = new ZipFile(file);
+/*
+    System.out.println("输出entry:"+fprFile.getEntry(FortifyConstants.AUDIT_FVDL_FILE).toString());
+    输出entry:audit.fvdl
+*/
     try {
       final InputStream reportStream = fprFile.getInputStream(fprFile.getEntry(FortifyConstants.AUDIT_FVDL_FILE));
       return new InputStream() {
@@ -93,6 +97,11 @@ class FortifyReportFile {
     return new FileInputStream(file);
   }
 
+  /**
+   * 获取fpr解压后结果文件流
+   * @return
+   * @throws IOException
+   */
   InputStream getInputStream() throws IOException {
     File file = getReportFromProperty();
     if (file == null) {

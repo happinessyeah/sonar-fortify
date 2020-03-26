@@ -135,8 +135,10 @@ public class FortifySensor implements Sensor {
   public void analyse(Project project, SensorContext context) {
     TimeProfiler profiler = new TimeProfiler().start("Process Fortify report");
     try {
+      // 获取fpr文件解压后结果文件流
       InputStream stream = this.report.getInputStream();
       try {
+        // xml文件转换为fvdl格式
         Fvdl fvdl = new FvdlStAXParser().parse(stream);
         addIssues(context, project, fvdl);
       } finally {
